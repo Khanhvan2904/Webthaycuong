@@ -5,6 +5,10 @@ import { OCRResult, AppState } from '../types';
 import { uploadToGAS } from '../services/gasOcrService';
 import { GeminiService } from '../services/geminiCorrectionService';
 
+// ✅ THÊM IMPORT
+import { Document, Packer, Paragraph, TextRun } from "docx";
+import { saveAs } from "file-saver";
+
 const DEPLOYED_GAS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJWrbPV_IQ2eGFx6hUYo6ZBaSPkMg5FkggTks_C8nZG-8CvRCXXrOVvqOv4G8ixoYi/exec';
 
 export const GasOcrTab: React.FC = () => {
@@ -79,6 +83,36 @@ export const GasOcrTab: React.FC = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  // ✅ THÊM HÀM DOCX
+  const handleDownloadDocx = async () => {
+    const textToSave = correctedText || ocrResult?.allMarkdownDataUri || '';
+    if (!textToSave) return;
+
+    const lines = textToSave.split('\n');
+
+    const paragraphs = lines.map(line =>
+      new Paragraph({
+        children: [new TextRun(line)],
+      })
+    );
+
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: paragraphs,
+        },
+      ],
+    });
+
+    const blob = await Packer.toBlob(doc);
+
+    saveAs(
+      blob,
+      (file?.name.replace('.pdf', '') || 'document') + '.docx'
+    );
   };
 
   const currentDisplayMarkdown = correctedText || ocrResult?.allMarkdownDataUri || '';
@@ -176,13 +210,16 @@ export const GasOcrTab: React.FC = () => {
                   Sửa lỗi bằng Gemini AI
                 </button>
               )}
-              {isCorrecting && (
-                <div className="px-4 py-2 bg-yellow-50 text-yellow-700 font-medium rounded-lg flex items-center gap-2 border border-yellow-200">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Đang sửa lỗi...
-                </div>
-              )}
-              <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block" />
+
+              {/* ✅ NÚT DOCX */}
+              <button
+                onClick={handleDownloadDocx}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg flex items-center gap-2 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Tải Word (.docx)
+              </button>
+
               <button
                 onClick={handleDownloadMarkdown}
                 className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-lg flex items-center gap-2 transition-colors"
